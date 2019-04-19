@@ -1,0 +1,24 @@
+{
+  "name": "mysql-generator-x",
+  "version": "0.1.0",
+  "description": "A new way to generate mysql statements.",
+  "main": "index.js",
+  "scripts": {
+    "test": "./node_modules/mocha/bin/mocha --require intelli-espower-loader ./test/test.js"
+  },
+  "devDependencies": {
+    "intelli-espower-loader": "^1.0.1",
+    "mocha": "^5.2.0",
+    "power-assert": "^1.5.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/michaellyu/mysql-generator-x.git"
+  },
+  "author": "michaellyu <michaellyu@outlook.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/michaellyu/mysql-generator-x/issues"
+  },
+  "homepage": "https://github.com/michaellyu/mysql-generator-x#readme"
+}
