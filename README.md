@@ -145,6 +145,15 @@ var {
   },
 });
 
+// offset, limit
+var {
+  sql, // SELECT * FROM `t1` LIMIT ?, ?
+  values, // [0, 10]
+} = mysql.select('t1', {
+  offset: 0,
+  limit: 10,
+});
+
 // page, size
 var {
   sql, // SELECT * FROM `t1` LIMIT ?, ?

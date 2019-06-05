@@ -223,7 +223,7 @@ describe('helper', function () {
   it('fillLimits', function () {
     const sql = [];
     const values = [];
-    helper.fillLimits(2, 10, sql, values);
+    helper.fillLimits(10, 10, sql, values);
     assert(sql.join(' ') === 'LIMIT ?, ?');
     assert(values.join(', ') === [10, 10].join(', '));
   });
@@ -320,7 +320,7 @@ describe('total', function () {
       page: 1,
       size: 10,
     });
-    assert(sql === 'SELECT COUNT(*) AS total FROM `t1` LEFT JOIN `t2` ON `t1`.`f1` = `t2`.`f2` WHERE `t1`.`f1` = ? ORDER BY `t1`.`f1` ASC');
+    assert(sql === 'SELECT COUNT(*) AS `total` FROM `t1` LEFT JOIN `t2` ON `t1`.`f1` = `t2`.`f2` WHERE `t1`.`f1` = ? ORDER BY `t1`.`f1` ASC');
     assert(values.join(', ') === '1');
   });
 });

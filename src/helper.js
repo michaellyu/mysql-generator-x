@@ -393,10 +393,10 @@ function genOrders(table, orders) {
     .join(', ');
 }
 
-function fillLimits(page = 1, size = 10, sql, values) {
+function fillLimits(offset = 0, limit = 10, sql, values) {
   sql.push('LIMIT ?, ?');
-  values.push((page - 1) * size);
-  values.push(size * 1);
+  values.push(offset);
+  values.push(limit);
 }
 
 module.exports = helper;

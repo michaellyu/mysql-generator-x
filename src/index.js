@@ -1,12 +1,6 @@
 const {
-  isObject,
-  isArray,
-  isString,
-} = require('./utils');
-const {
   fillColumns,
   fillJoins,
-  fillWhere,
   fillWheres,
   fillOrders,
   fillLimits,
@@ -40,8 +34,8 @@ const mysql = {
    *     t1: ['f1'],
    *     t2: [['f2', 'desc']],
    *   },
-   *   page: 1,
-   *   size: 10,
+   *   offset: 0,
+   *   limit: 10,
    * }
    */
   select: function (table, options = {}, isTotal = false) {
@@ -49,9 +43,8 @@ const mysql = {
     const values = [];
     sql.push('SELECT');
     if (isTotal) {
-      sql.push('COUNT(*) AS total');
-    }
-    else {
+      sql.push('COUNT(*) AS `total`');
+    } else {
       fillColumns(table, options.columns, sql);
     }
     sql.push(`FROM \`${table}\``);
@@ -64,8 +57,10 @@ const mysql = {
     if (options.orders || options.order || options.orderby || options.orderBy) {
       fillOrders(table, options.orders || options.order || options.orderby || options.orderBy, sql, values);
     }
-    if (options.page && options.size && !isTotal) {
-      fillLimits(options.page, options.size, sql, values);
+    if (options.offset && options.limit && !isTotal) {
+      fillLimits(options.offset * 1, options.size * 1, sql, values);
+    } else if (options.page && options.size && !isTotal) {
+      fillLimits((options.page - 1) * options.size, options.size, sql, values);
     }
     return {
       sql: sql.join(' '),
