@@ -159,7 +159,7 @@ describe('helper', function () {
         ],
       },
     ], sql, values);
-    assert(sql.join(' ') === 'WHERE `t1`.`f1` = ? OR ( `t1`.`f2` = ? ) OR ( `t1`.`f3` = ? OR ( `t1`.`f4` = ? ) OR ( `t1`.`f5` = ? OR ( `t1`.`f6` = ? ) OR ( `t1`.`f7` = ? ) ) )');
+    assert(sql.join(' ') === 'WHERE `t1`.`f1` = ? OR `t1`.`f2` = ? OR ( `t1`.`f3` = ? OR `t1`.`f4` = ? OR ( `t1`.`f5` = ? OR `t1`.`f6` = ? OR `t1`.`f7` = ? ) )');
     assert(values.join(', ') === [1, 2, 3, 4, 5, 6, 7].join(', '));
   });
 
@@ -278,6 +278,35 @@ describe('select', function () {
     } = mysql.select('t1', { wheres: { f1: 1 } });
     assert(sql === 'SELECT * FROM `t1` WHERE `t1`.`f1` = ?');
     assert(values.join(', ') === '1');
+  });
+
+  it('wheres joins, and, or', function () {
+    const {
+      sql,
+      values,
+    } = mysql.select('t1', {
+      joins: {
+        t2: ['f1', 'f2'],
+      },
+      wheres: [
+        ['f3', '=', 3],
+        {
+          and: [
+            ['f4', '=', 4],
+            {
+              or: ['f5', '=', 5],
+            },
+            {
+              or: {
+                t2: ['f6', '=', 6],
+              },
+            },
+          ],
+        },
+      ],
+    });
+    assert(sql === 'SELECT * FROM `t1` LEFT JOIN `t2` ON `t1`.`f1` = `t2`.`f2` WHERE `t1`.`f3` = ? AND ( `t1`.`f4` = ? OR `t1`.`f5` = ? OR `t2`.`f6` = ? )');
+    assert(values.join(', ') === '3, 4, 5, 6');
   });
 
   it('orders [\'f1\']', function () {

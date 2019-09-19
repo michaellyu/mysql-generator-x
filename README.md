@@ -71,6 +71,7 @@ var {
   ],
 });
 
+// alias
 var {
   sql, // SELECT * FROM `t1` AS `t` LEFT JOIN `t1` AS `p` ON `t`.`f1` = `p`.`f2`
 } = mysql.select('t', {
@@ -96,7 +97,7 @@ var {
 
 // wheres(=, !=, <>, >, >=, <, <=, null, notnull, like, notlike, between, notbetween, in, notin)
 var {
-  sql, // SELECT * FROM `t1` WHERE `t1`.`f1` = ? AND `t1`.`f2` > ? OR ( `t1`.`f3` IN (?) )
+  sql, // SELECT * FROM `t1` WHERE `t1`.`f1` = ? AND `t1`.`f2` > ? OR `t1`.`f3` IN (?)
   values, // [1, 2, [3, 4, 5]]
   } = mysql.select('t1', {
     wheres: [
@@ -111,7 +112,7 @@ var {
 // wheres with multiple tables
 var {
   sql, // SELECT * FROM `t1` LEFT JOIN `t2` ON `t1`.`f1` = `t2`.`f2` LEFT JOIN `t3` ON `t1`.`f1` = `t3`.`f3` WHERE `t1`.`f1` = ? AND `t2`.`f2` = ? OR ( `t3`.`f3` = ? AND `t4`.`f4` = ? )
-  values, // [1, 2, [3, 4, 5]]
+  values, // [1, 2, 3, 4]
 } = mysql.select('t1', {
   joins: {
     t2: ['f1', 'f2'],

@@ -7,7 +7,7 @@ const {
 const helper = {
   fillColumns,
   fillJoins,
-  fillWhere,
+  // fillWhere,
   fillWheres,
   fillOrders,
   fillLimits,
@@ -121,70 +121,6 @@ function fillJoins(table, alias, joins, sql) {
 }
 
 /*
- * where: {
- *   id: 1,
- *   pid: 2,
- * }
- * OR
- * where: [
- *   ['id', '=', 1],
- *   ['pid', '=', 2],
- *   {
- *     or: ['qid', '=', 3],
- *   },
- *   {
- *     or: [
- *       ['mid', '=', 4],
- *       ['nid', '=', 5],
- *     ],
- *   },
- *   {
- *     and: ['kid', '=', 6],
- *   },
- * ]
- */
-function fillWhere(table, where, sql, values) {
-  if (isObject(where)) {
-    if (where.or) {
-      sql.push('OR');
-      sql.push('(');
-      fillWhere(table, where.or, sql, values);
-      sql.push(')');
-    } else if (where.and) {
-      sql.push('AND');
-      sql.push('(');
-      fillWhere(table, where.and, sql, values);
-      sql.push(')');
-    } else {
-      Object
-        .keys(where)
-        .forEach((field, index) => {
-          if (index > 0) {
-            sql.push('AND');
-          }
-          genWhere(table, [field, '=', where[field]], sql, values);
-        });
-    }
-  } else if (isArray(where)) {
-    if (isExp(where)) {
-      genWhere(table, where, sql, values);
-    } else {
-      where
-        .forEach((wh, index) => {
-          if (isExp(wh)) {
-            if (index > 0) {
-              sql.push('AND');
-            }
-            genWhere(table, wh, sql, values);
-          } else {
-            fillWhere(table, wh, sql, values);
-          }
-        });
-    }
-  }
-}
-
-/*
  * wheres: {
  *   f1: 1,
  *   f2: 2,
@@ -220,7 +156,10 @@ function fillWhere(table, where, sql, values) {
  * ]
  */
 function fillWheres(table, wheres, sql, values) {
-  if (isObject(wheres) && Object.keys(wheres).length) {
+  if (isExp(wheres)) {
+    sql.push('WHERE');
+    genWhere(table, wheres, sql, values);
+  } else if (isObject(wheres)) {
     sql.push('WHERE');
     Object
       .keys(wheres)
@@ -230,76 +169,58 @@ function fillWheres(table, wheres, sql, values) {
         }
         genWhere(table, [field, '=', wheres[field]], sql, values);
       });
-  } else if (isArray(wheres) && wheres.length) {
+  } else if (isArray(wheres)) {
     sql.push('WHERE');
-    genWheres(table, wheres, sql, values);
+    wheres
+      .forEach((where, index) => {
+        if (index > 0) {
+          if (where.or) {
+            sql.push('OR');
+          } else {
+            sql.push('AND');
+          }
+        }
+        genWheres(table, where, sql, values);
+      });
   }
 }
 
 function genWheres(table, wheres, sql, values) {
-  if (isObject(wheres)) {
+  if (isExp(wheres)) {
+    genWhere(table, wheres, sql, values);
+  } else if (isObject(wheres)) {
     if (wheres.or) {
-      sql.push('OR');
-      sql.push('(');
       genWheres(table, wheres.or, sql, values);
-      sql.push(')');
-    } else { // multiple table
+    } else if (wheres.and) {
+      genWheres(table, wheres.and, sql, values);
+    } else { // table scope
       Object
         .keys(wheres)
-        .forEach((tb, index) => {
-          if (isObject(wheres[tb])) {
+        .forEach((tb, idx) => {
+          if (idx > 0) {
             if (wheres[tb].or) {
               sql.push('OR');
-              sql.push('(');
-              genWheres(tb, wheres[tb].or, sql, values);
-              sql.push(')');
             } else {
-              if (index > 0) {
-                sql.push('AND');
-              }
-              genWheres(tb, wheres[tb].or, sql, values);
-            }
-          } else {
-            if (index > 0) {
               sql.push('AND');
             }
-            genWheres(tb, wheres[tb], sql, values);
           }
+          genWheres(tb, wheres[tb], sql, values);
         });
     }
   } else if (isArray(wheres)) {
-    if (isExp(wheres)) {
-      genWhere(table, wheres, sql, values);
-    } else {
-      wheres
-        .forEach((where, index) => {
-          if (isObject(where)) {
-            if (where.or) {
-              sql.push('OR');
-              sql.push('(');
-              genWheres(table, where.or, sql, values);
-              sql.push(')');
-            } else { // multiple table
-              if (index > 0) {
-                sql.push('AND');
-              }
-              Object
-                .keys(where)
-                .forEach((tb, idx) => {
-                  if (idx > 0) {
-                    sql.push('AND');
-                  }
-                  genWheres(tb, where[tb], sql, values);
-                });
-            }
-          } else if (isArray(where)) {
-            if (index > 0) {
-              sql.push('AND');
-            }
-            genWheres(table, where, sql, values);
+    sql.push('(');
+    wheres
+      .forEach((where, index) => {
+        if (index > 0) {
+          if (where.or) {
+            sql.push('OR');
+          } else {
+            sql.push('AND');
           }
-        });
-    }
+        }
+        genWheres(table, where, sql, values);
+      });
+    sql.push(')');
   }
 }
 
