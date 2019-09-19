@@ -276,6 +276,33 @@ describe('select', function () {
     assert(values.join(', ') === '0, 10');
   });
 
+  it('page 10 size 10', function () {
+    const {
+      sql,
+      values,
+    } = mysql.select('t1', { page: 10, size: 10 });
+    assert(sql === 'SELECT * FROM `t1` LIMIT ?, ?');
+    assert(values.join(', ') === '90, 10');
+  });
+
+  it('offset 0 limit 10', function () {
+    const {
+      sql,
+      values,
+    } = mysql.select('t1', { offset: 0, limit: 10 });
+    assert(sql === 'SELECT * FROM `t1` LIMIT ?, ?');
+    assert(values.join(', ') === '0, 10');
+  });
+
+  it('offset 10 limit 10', function () {
+    const {
+      sql,
+      values,
+    } = mysql.select('t1', { offset: 10, limit: 10 });
+    assert(sql === 'SELECT * FROM `t1` LIMIT ?, ?');
+    assert(values.join(', ') === '10, 10');
+  });
+
   it('mixins', function () {
     const {
       sql,

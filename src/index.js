@@ -57,8 +57,8 @@ const mysql = {
     if (options.orders || options.order || options.orderby || options.orderBy) {
       fillOrders(table, options.orders || options.order || options.orderby || options.orderBy, sql, values);
     }
-    if (options.offset && options.limit && !isTotal) {
-      fillLimits(options.offset * 1, options.size * 1, sql, values);
+    if (options.limit && !isTotal) {
+      fillLimits((options.offset || 0) * 1, options.limit * 1, sql, values);
     } else if (options.page && options.size && !isTotal) {
       fillLimits((options.page - 1) * options.size, options.size, sql, values);
     }
