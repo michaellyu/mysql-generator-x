@@ -39,15 +39,24 @@ function fillColumns(table, columns, sql) {
 }
 
 function genColumns(table, columns) {
-  return columns
-    .map((column) => {
-      if (isArray(column) && column.length > 1) {
-        return `\`${table}\`.\`${column[0]}\` AS \`${column[1]}\``;
-      } else {
-        return `\`${table}\`.\`${column}\``;
-      }
-    })
-    .join(', ');
+  if (isArray(columns)) {
+    return columns
+      .map((column) => {
+        if (isArray(column) && column.length > 1) {
+          return `\`${table}\`.\`${column[0]}\` AS \`${column[1]}\``;
+        } else {
+          return `\`${table}\`.\`${column}\``;
+        }
+      })
+      .join(', ');
+  } else if (isString(columns)) {
+    if (columns !== '*') {
+      return `\`${table}\`.\`${columns}\``;
+    } else {
+      return `\`${table}\`.*`;
+    }
+  }
+  return '*';
 }
 
 /*
@@ -72,12 +81,12 @@ function genColumns(table, columns) {
  *   },
  * ]
  */
-function fillJoins(table, joins, sql) {
+function fillJoins(table, alias, joins, sql) {
   if (isObject(joins)) {
     Object
       .keys(joins)
       .forEach((tb) => {
-        sql.push(`LEFT JOIN \`${tb}\` ON \`${table}\`.\`${joins[tb][0]}\` = \`${tb}\`.\`${joins[tb][1]}\``);
+        sql.push(`LEFT JOIN ${alias && alias[tb] ? `\`${alias[tb]}\` AS \`${tb}\`` : `\`${tb}\``} ON \`${table}\`.\`${joins[tb][0]}\` = \`${tb}\`.\`${joins[tb][1]}\``);
       });
   } else if (isArray(joins)) {
     joins
@@ -103,9 +112,9 @@ function fillJoins(table, joins, sql) {
           } else {
             return;
           }
-          sql.push(`${joinType} \`${tables[1]}\` ON \`${tables[0]}\`.\`${join.on[0]}\` = \`${tables[1]}\`.\`${join.on[1]}\``);
+          sql.push(`${joinType} ${alias && alias[tables[1]] ? `\`${alias[tables[1]]}\` AS \`${tables[1]}\`` : `\`${tables[1]}\``} ON \`${tables[0]}\`.\`${join.on[0]}\` = \`${tables[1]}\`.\`${join.on[1]}\``);
         } else if (isArray(join)) {
-          sql.push(`LEFT JOIN \`${join[0]}\` ON \`${table}\`.\`${join[1]}\` = \`${join[0]}\`.\`${join[2]}\``);
+          sql.push(`LEFT JOIN ${alias && alias[join[0]] ? `\`${alias[join[0]]}\` AS \`${join[0]}\`` : `\`${join[0]}\``} ON \`${table}\`.\`${join[1]}\` = \`${join[0]}\`.\`${join[2]}\``);
         }
       });
   }

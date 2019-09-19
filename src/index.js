@@ -1,4 +1,9 @@
 const {
+  isArray,
+  isString,
+} = require('./utils');
+
+const {
   fillColumns,
   fillJoins,
   fillWheres,
@@ -38,18 +43,23 @@ const mysql = {
    *   limit: 10,
    * }
    */
-  select: function (table, options = {}, isTotal = false) {
+  select: function (table, options = {}, isCount = false) {
     const sql = [];
     const values = [];
     sql.push('SELECT');
-    if (isTotal) {
+    if (isCount) {
       sql.push('COUNT(*) AS `total`');
     } else {
       fillColumns(table, options.columns, sql);
     }
-    sql.push(`FROM \`${table}\``);
+    sql.push(`FROM`);
+    if (options.alias && options.alias[table]) {
+      sql.push(`\`${options.alias[table]}\` AS \`${table}\``);
+    } else {
+      sql.push(`\`${table}\``);
+    }
     if (options.joins || options.join) {
-      fillJoins(table, options.joins || options.join, sql, values);
+      fillJoins(table, options.alias, options.joins || options.join, sql, values);
     }
     if (options.wheres || options.where) {
       fillWheres(table, options.wheres || options.where, sql, values);
@@ -57,9 +67,9 @@ const mysql = {
     if (options.orders || options.order || options.orderby || options.orderBy) {
       fillOrders(table, options.orders || options.order || options.orderby || options.orderBy, sql, values);
     }
-    if (options.limit && !isTotal) {
+    if (options.limit && !isCount) {
       fillLimits((options.offset || 0) * 1, options.limit * 1, sql, values);
-    } else if (options.page && options.size && !isTotal) {
+    } else if (options.page && options.size && !isCount) {
       fillLimits((options.page - 1) * options.size, options.size, sql, values);
     }
     return {

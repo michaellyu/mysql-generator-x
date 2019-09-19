@@ -71,6 +71,18 @@ var {
   ],
 });
 
+var {
+  sql, // SELECT * FROM `t1` AS `t` LEFT JOIN `t1` AS `p` ON `t`.`f1` = `p`.`f2`
+} = mysql.select('t', {
+  alias: {
+    t: 't1',
+    p: 't1',
+  },
+  joins: {
+    p: ['f1', 'f2'],
+  },
+});
+
 // wheres
 var {
   sql, // SELECT * FROM `t1` WHERE `t1`.`f1` = ? AND `t1`.`f2` = ?

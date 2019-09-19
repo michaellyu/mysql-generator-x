@@ -36,10 +36,19 @@ describe('helper', function () {
     assert(sql.join(' ') === '`t1`.`f1`, `t1`.`f2`, `t1`.`f3` AS `f33`, `t2`.`f4`');
   });
 
+  it('fillColumns object with *', function () {
+    const sql = [];
+    helper.fillColumns('t1', {
+      t1: '*',
+      t2: ['f1'],
+    }, sql);
+    assert(sql.join(' ') === '`t1`.*, `t2`.`f1`');
+  });
+
   it('fillJoins object', function () {
     const sql = [];
     const values = [];
-    helper.fillJoins('t1', {
+    helper.fillJoins('t1', null, {
       t2: ['f1', 'f2'],
       t3: ['f3', 'f4'],
     }, sql, values);
@@ -50,7 +59,7 @@ describe('helper', function () {
   it('fillJoins array', function () {
     const sql = [];
     const values = [];
-    helper.fillJoins('t1', [
+    helper.fillJoins('t1', null, [
       ['t2', 'f1', 'f2'],
       ['t3', 'f3', 'f4'],
     ], sql, values);
@@ -61,7 +70,7 @@ describe('helper', function () {
   it('fillJoins array 2', function () {
     const sql = [];
     const values = [];
-    helper.fillJoins('t1', [
+    helper.fillJoins('t1', null, [
       {
         left: ['t1', 't2'],
         on: ['f1', 'f2'],
@@ -73,6 +82,17 @@ describe('helper', function () {
     ], sql, values);
     assert(sql.join(' ') === 'LEFT JOIN `t2` ON `t1`.`f1` = `t2`.`f2` LEFT JOIN `t3` ON `t1`.`f3` = `t3`.`f4`');
     assert(values.join(', ') === [].join(', '));
+  });
+
+  it('fillJoins with alias', function () {
+    const sql = [];
+    helper.fillJoins('t', {
+      t: 't1',
+      p: 't1',
+    }, {
+      p: ['f1', 'f2'],
+    }, sql);
+    assert(sql.join(' ') === 'LEFT JOIN `t1` AS `p` ON `t`.`f1` = `p`.`f2`');
   });
 
   it('fillWheres single table exp(array)', function () {
@@ -324,6 +344,77 @@ describe('select', function () {
     });
     assert(sql === 'SELECT `t1`.`f1`, `t2`.`f2` FROM `t1` LEFT JOIN `t2` ON `t1`.`f1` = `t2`.`f2` WHERE `t1`.`f1` = ? ORDER BY `t1`.`f1` ASC LIMIT ?, ?');
     assert(values.join(', ') === '1, 0, 10');
+  });
+
+  it('alias table name', function () {
+    const {
+      sql,
+    } = mysql.select('t', {
+      alias: {
+        t: 't1',
+      },
+    });
+    assert(sql === 'SELECT * FROM `t1` AS `t`');
+  });
+
+  it('joins with alias', function () {
+    const {
+      sql,
+    } = mysql.select('t', {
+      alias: {
+        t: 't1',
+        p: 't1',
+      },
+      joins: {
+        p: ['f1', 'f2'],
+      },
+      columns: {
+        t: '*',
+        p: [['f3', 'f3333']],
+      },
+    });
+    assert(sql === 'SELECT `t`.*, `p`.`f3` AS `f3333` FROM `t1` AS `t` LEFT JOIN `t1` AS `p` ON `t`.`f1` = `p`.`f2`');
+  });
+
+  it('joins with alias 2', function () {
+    const {
+      sql,
+    } = mysql.select('t', {
+      alias: {
+        t: 't1',
+        p: 't1',
+      },
+      joins: [
+        {
+          left: ['t', 'p'],
+          on: ['f1', 'f2'],
+        },
+      ],
+      columns: {
+        t: '*',
+        p: [['f3', 'f3333']],
+      },
+    });
+    assert(sql === 'SELECT `t`.*, `p`.`f3` AS `f3333` FROM `t1` AS `t` LEFT JOIN `t1` AS `p` ON `t`.`f1` = `p`.`f2`');
+  });
+
+  it('joins with alias 3', function () {
+    const {
+      sql,
+    } = mysql.select('t', {
+      alias: {
+        t: 't1',
+        p: 't1',
+      },
+      joins: [
+        ['p', 'f1', 'f2'],
+      ],
+      columns: {
+        t: '*',
+        p: [['f3', 'f3333']],
+      },
+    });
+    assert(sql === 'SELECT `t`.*, `p`.`f3` AS `f3333` FROM `t1` AS `t` LEFT JOIN `t1` AS `p` ON `t`.`f1` = `p`.`f2`');
   });
 });
 
