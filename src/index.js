@@ -1,9 +1,4 @@
 const {
-  isArray,
-  isString,
-} = require('./utils');
-
-const {
   fillColumns,
   fillJoins,
   fillWheres,
@@ -47,6 +42,9 @@ const mysql = {
     const sql = [];
     const values = [];
     sql.push('SELECT');
+    if (options.distinct) {
+      sql.push('DISTINCT');
+    }
     if (isCount) {
       sql.push('COUNT(*) AS `total`');
     } else {

@@ -445,6 +445,16 @@ describe('select', function () {
     });
     assert(sql === 'SELECT `t`.*, `p`.`f3` AS `f3333` FROM `t1` AS `t` LEFT JOIN `t1` AS `p` ON `t`.`f1` = `p`.`f2`');
   });
+
+  it('distinct', function () {
+    const {
+      sql,
+    } = mysql.select('t1', {
+      distinct: true,
+      columns: ['f1'],
+    });
+    assert(sql === 'SELECT DISTINCT `t1`.`f1` FROM `t1`');
+  });
 });
 
 describe('total', function () {

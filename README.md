@@ -43,6 +43,14 @@ var {
   },
 });
 
+// distinct
+const {
+  sql, // SELECT DISTINCT `t1`.`f1` FROM `t1`
+} = mysql.select('t1', {
+  distinct: true,
+  columns: ['f1'],
+});
+
 // joins
 var {
   sql, // SELECT * FROM `t1` LEFT JOIN `t2` ON `t1`.`f1` = `t2`.`f2` LEFT JOIN `t3` ON `t1`.`f1` = `t3`.`f3`
