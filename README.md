@@ -217,11 +217,11 @@ var {
   },
 });
 
-/* CREATE */ 
+/* INSERT */ 
 var {
   sql, // INSERT INTO `t1` (`t1`.`f1`, `t1`.`f2`) VALUES (?, ?)
   values, // [1, 2]
-} = mysql.create('t1', {
+} = mysql.insert('t1', {
   f1: 1,
   f2: 2,
 });

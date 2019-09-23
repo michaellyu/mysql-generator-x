@@ -116,7 +116,7 @@ const mysql = {
    *   f2: 2,
    * },
    */
-  create: function (table, columns = {}) {
+  insert: function (table, columns = {}) {
     const values = [];
     const fields = [];
     const places = [];

@@ -500,12 +500,12 @@ describe('total', function () {
   });
 });
 
-describe('create', function () {
-  it('create', function () {
+describe('insert', function () {
+  it('insert', function () {
     const {
       sql,
       values,
-    } = mysql.create('t1', {
+    } = mysql.insert('t1', {
       f1: 1,
       f2: 2,
     });
