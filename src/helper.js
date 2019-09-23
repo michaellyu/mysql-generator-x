@@ -7,7 +7,6 @@ const {
 const helper = {
   fillColumns,
   fillJoins,
-  // fillWhere,
   fillWheres,
   fillOrders,
   fillLimits,
@@ -160,17 +159,17 @@ function fillWheres(table, wheres, sql, values) {
     sql.push('WHERE');
     genWhere(table, wheres, sql, values);
   } else if (isObject(wheres)) {
-    sql.push('WHERE');
     Object
       .keys(wheres)
       .forEach((field, index) => {
         if (index > 0) {
           sql.push('AND');
+        } else {
+          sql.push('WHERE');
         }
         genWhere(table, [field, '=', wheres[field]], sql, values);
       });
   } else if (isArray(wheres)) {
-    sql.push('WHERE');
     wheres
       .forEach((where, index) => {
         if (index > 0) {
@@ -179,6 +178,8 @@ function fillWheres(table, wheres, sql, values) {
           } else {
             sql.push('AND');
           }
+        } else {
+          sql.push('WHERE');
         }
         genWheres(table, where, sql, values);
       });

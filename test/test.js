@@ -446,6 +446,24 @@ describe('select', function () {
     assert(sql === 'SELECT `t`.*, `p`.`f3` AS `f3333` FROM `t1` AS `t` LEFT JOIN `t1` AS `p` ON `t`.`f1` = `p`.`f2`');
   });
 
+  it('where is empty object', function () {
+    const {
+      sql,
+    } = mysql.select('t', {
+      wheres: {},
+    });
+    assert(sql === 'SELECT * FROM `t`');
+  });
+
+  it('where is empty array', function () {
+    const {
+      sql,
+    } = mysql.select('t', {
+      wheres: [],
+    });
+    assert(sql === 'SELECT * FROM `t`');
+  });
+
   it('distinct', function () {
     const {
       sql,
