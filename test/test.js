@@ -473,6 +473,46 @@ describe('select', function () {
     });
     assert(sql === 'SELECT DISTINCT `t1`.`f1` FROM `t1`');
   });
+
+  it('subQuery in', function () {
+    const {
+      sql,
+      values,
+    } = mysql.select('t1', {
+      wheres: [
+        ['f0', '=', 0],
+        ['f1', 'IN', mysql.subQuery('t2', {
+          columns: ['f2'],
+          wheres: {
+            f3: 3,
+          },
+        })],
+        ['f4', '=', 4],
+      ],
+    });
+    assert(sql === 'SELECT * FROM `t1` WHERE `t1`.`f0` = ? AND `t1`.`f1` IN (SELECT `t2`.`f2` FROM `t2` WHERE `t2`.`f3` = ?) AND `t1`.`f4` = ?');
+    assert(values.join(', ') === '0, 3, 4');
+  });
+
+  it('subQuery not in', function () {
+    const {
+      sql,
+      values,
+    } = mysql.select('t1', {
+      wheres: [
+        ['f0', '=', 0],
+        ['f1', 'NOT IN', mysql.subQuery('t2', {
+          columns: ['f2'],
+          wheres: {
+            f3: 3,
+          },
+        })],
+        ['f4', '=', 4],
+      ],
+    });
+    assert(sql === 'SELECT * FROM `t1` WHERE `t1`.`f0` = ? AND `t1`.`f1` NOT IN (SELECT `t2`.`f2` FROM `t2` WHERE `t2`.`f3` = ?) AND `t1`.`f4` = ?');
+    assert(values.join(', ') === '0, 3, 4');
+  });
 });
 
 describe('total', function () {
@@ -497,6 +537,46 @@ describe('total', function () {
     });
     assert(sql === 'SELECT COUNT(*) AS `total` FROM `t1` LEFT JOIN `t2` ON `t1`.`f1` = `t2`.`f2` WHERE `t1`.`f1` = ? ORDER BY `t1`.`f1` ASC');
     assert(values.join(', ') === '1');
+  });
+
+  it('subQuery exists', function () {
+    const {
+      sql,
+      values,
+    } = mysql.select('t1', {
+      wheres: [
+        ['f0', '=', 0],
+        ['EXISTS', mysql.subQuery('t2', {
+          columns: ['f2'],
+          wheres: {
+            f3: 3,
+          },
+        })],
+        ['f4', '=', 4],
+      ],
+    });
+    assert(sql === 'SELECT * FROM `t1` WHERE `t1`.`f0` = ? AND EXISTS (SELECT `t2`.`f2` FROM `t2` WHERE `t2`.`f3` = ?) AND `t1`.`f4` = ?');
+    assert(values.join(', ') === '0, 3, 4');
+  });
+
+  it('subQuery not exists', function () {
+    const {
+      sql,
+      values,
+    } = mysql.select('t1', {
+      wheres: [
+        ['f0', '=', 0],
+        ['NOT EXISTS', mysql.subQuery('t2', {
+          columns: ['f2'],
+          wheres: {
+            f3: 3,
+          },
+        })],
+        ['f4', '=', 4],
+      ],
+    });
+    assert(sql === 'SELECT * FROM `t1` WHERE `t1`.`f0` = ? AND NOT EXISTS (SELECT `t2`.`f2` FROM `t2` WHERE `t2`.`f3` = ?) AND `t1`.`f4` = ?');
+    assert(values.join(', ') === '0, 3, 4');
   });
 });
 

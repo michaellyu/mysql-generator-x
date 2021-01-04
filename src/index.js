@@ -75,6 +75,15 @@ const mysql = {
       values,
     };
   },
+  subQuery: function (table, options = {}, isCount = false) {
+    function subQuery () {
+      return mysql.select(table, options, isCount);
+    };
+    subQuery.toUpperCase = function () {
+      return 'SUBQUERY';
+    };
+    return subQuery;
+  },
   /*
    * table: 't1', options: {
    *   columns: {

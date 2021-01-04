@@ -1,5 +1,6 @@
 const {
   isObject,
+  isFunction,
   isArray,
   isString,
 } = require('./utils');
@@ -242,22 +243,35 @@ function genWhere(table, [field, operator, value], sql, values) {
       values.push(value);
       break;
     case 'NOTLIKE':
+    case 'NOT LIKE':
       sql.push(`\`${table}\`.\`${field}\` NOT LIKE ?`);
       values.push(value);
       break;
     case 'IN':
-      sql.push(`\`${table}\`.\`${field}\` IN (?)`);
-      values.push(value);
+      if (!isSubQuery(value)) {
+        sql.push(`\`${table}\`.\`${field}\` IN (?)`);
+        values.push(value);
+      } else {
+        const subQuery = value();
+        sql.push(`\`${table}\`.\`${field}\` IN (${subQuery.sql})`);
+        values.push(...subQuery.values);
+      }
       break;
     case 'NOTIN':
-      sql.push(`\`${table}\`.\`${field}\` NOT IN (?)`);
-      values.push(value);
+    case 'NOT IN':
+      if (!isSubQuery(value)) {
+        sql.push(`\`${table}\`.\`${field}\` NOT IN (?)`);
+        values.push(value);
+      } else {
+        const subQuery = value();
+        sql.push(`\`${table}\`.\`${field}\` NOT IN (${subQuery.sql})`);
+        values.push(...subQuery.values);
+      }
       break;
     case 'BETWEEN':
       sql.push(`\`${table}\`.\`${field}\` BETWEEN ? AND ?`);
       values.push(value[0]);
       values.push(value[1]);
-      break;
       break;
     case 'NOTBETWEEN':
       sql.push(`\`${table}\`.\`${field}\` NOT BETWEEN ? AND ?`);
@@ -276,13 +290,35 @@ function genWhere(table, [field, operator, value], sql, values) {
       sql.push(`\`${table}\`.\`${field}\` IS NOT NULL`);
       break;
     default:
-      sql.push(`\`${table}\`.\`${field}\` = ?`);
-      values.push(operator);
+      switch (field.toUpperCase()) {
+        case 'EXISTS':
+          if (isSubQuery(operator)) {
+            const subQuery = operator();
+            sql.push(`EXISTS (${subQuery.sql})`);
+            values.push(...subQuery.values);
+          }
+          break;
+        case 'NOTEXISTS':
+        case 'NOT EXISTS':
+          if (isSubQuery(operator)) {
+            const subQuery = operator();
+            sql.push(`NOT EXISTS (${subQuery.sql})`);
+            values.push(...subQuery.values);
+          }
+          break;
+        default:
+          sql.push(`\`${table}\`.\`${field}\` = ?`);
+          values.push(operator);
+      }
   }
 }
 
 function isExp(exp) {
   return exp && isArray(exp) && isString(exp[0]);
+}
+
+function isSubQuery(fn) {
+  return fn && isFunction(fn) && fn.name === 'subQuery';
 }
 
 /*
