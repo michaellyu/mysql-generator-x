@@ -490,7 +490,7 @@ describe('select', function () {
         ['f4', '=', 4],
       ],
     });
-    assert(sql === 'SELECT * FROM `t1` WHERE `t1`.`f0` = ? AND `t1`.`f1` IN (SELECT `t2`.`f2` FROM `t2` WHERE `t2`.`f3` = ?) AND `t1`.`f4` = ?');
+    assert(sql === 'SELECT * FROM `t1` WHERE `t1`.`f0` = ? AND `t1`.`f1` IN ( SELECT `t2`.`f2` FROM `t2` WHERE `t2`.`f3` = ? ) AND `t1`.`f4` = ?');
     assert(values.join(', ') === '0, 3, 4');
   });
 
@@ -510,8 +510,133 @@ describe('select', function () {
         ['f4', '=', 4],
       ],
     });
-    assert(sql === 'SELECT * FROM `t1` WHERE `t1`.`f0` = ? AND `t1`.`f1` NOT IN (SELECT `t2`.`f2` FROM `t2` WHERE `t2`.`f3` = ?) AND `t1`.`f4` = ?');
+    assert(sql === 'SELECT * FROM `t1` WHERE `t1`.`f0` = ? AND `t1`.`f1` NOT IN ( SELECT `t2`.`f2` FROM `t2` WHERE `t2`.`f3` = ? ) AND `t1`.`f4` = ?');
     assert(values.join(', ') === '0, 3, 4');
+  });
+
+  it('subQuery exists', function () {
+    const {
+      sql,
+      values,
+    } = mysql.select('t1', {
+      wheres: [
+        ['f0', '=', 0],
+        ['EXISTS', mysql.subQuery('t2', {
+          columns: ['f2'],
+          wheres: {
+            f3: 3,
+          },
+        })],
+        ['f4', '=', 4],
+      ],
+    });
+    assert(sql === 'SELECT * FROM `t1` WHERE `t1`.`f0` = ? AND EXISTS ( SELECT `t2`.`f2` FROM `t2` WHERE `t2`.`f3` = ? ) AND `t1`.`f4` = ?');
+    assert(values.join(', ') === '0, 3, 4');
+  });
+
+  it('subQuery not exists', function () {
+    const {
+      sql,
+      values,
+    } = mysql.select('t1', {
+      wheres: [
+        ['f0', '=', 0],
+        ['NOT EXISTS', mysql.subQuery('t2', {
+          columns: ['f2'],
+          wheres: {
+            f3: 3,
+          },
+        })],
+        ['f4', '=', 4],
+      ],
+    });
+    assert(sql === 'SELECT * FROM `t1` WHERE `t1`.`f0` = ? AND NOT EXISTS ( SELECT `t2`.`f2` FROM `t2` WHERE `t2`.`f3` = ? ) AND `t1`.`f4` = ?');
+    assert(values.join(', ') === '0, 3, 4');
+  });
+
+  it('nested subQuery', function () {
+    const {
+      sql,
+      values,
+    } = mysql.select('t1', {
+      wheres: [
+        ['f1', 'in', mysql.subQuery('t2', {
+          columns: ['f2'],
+          wheres: ['f3', 'in', mysql.subQuery('t3', {
+            columns: ['f4'],
+            wheres: {
+              f5: 1,
+            },
+          })],
+        })],
+      ],
+    });
+    assert(sql === 'SELECT * FROM `t1` WHERE `t1`.`f1` IN ( SELECT `t2`.`f2` FROM `t2` WHERE `t2`.`f3` IN ( SELECT `t3`.`f4` FROM `t3` WHERE `t3`.`f5` = ? ) )');
+    assert(values.join(', ') === '1');
+  });
+
+  it('raw where', function () {
+    const {
+      sql,
+      values,
+    } = mysql.select('t1', {
+      wheres: mysql.raw('1 = 1'),
+    });
+    assert(sql === 'SELECT * FROM `t1` WHERE 1 = 1');
+    assert(values.join(', ') === '');
+  });
+
+  it('raw where 2', function () {
+    const {
+      sql,
+      values,
+    } = mysql.select('t1', {
+      columns: [mysql.raw('ABS(`t1`.`f1`)')],
+      wheres: {
+        f2: 1,
+        f3: mysql.raw('ABS(?)', [-1]),
+      },
+    });
+    assert(sql === 'SELECT ABS(`t1`.`f1`) FROM `t1` WHERE `t1`.`f2` = ? AND `t1`.`f3` = ABS(?)');
+    assert(values.join(', ') === '1, -1');
+  });
+
+  it('raw where 3', function () {
+    const {
+      sql,
+      values,
+    } = mysql.select('t1', {
+      columns: [
+        [mysql.raw('ABS(`t1`.`f0`)'), 'f0'],
+        mysql.raw('ABS(`t1`.`f1`)'),
+      ],
+      wheres: [
+        ['f2', '=', mysql.raw('ABS(?)', [1])],
+        mysql.raw('`t1`.`f3` = ABS(?)', [-1]),
+        {
+          or: mysql.raw('`t1`.`f4` = ABS(?)', [-2]),
+        },
+      ],
+    });
+    assert(sql === 'SELECT ABS(`t1`.`f0`) AS `f0`, ABS(`t1`.`f1`) FROM `t1` WHERE `t1`.`f2` = ABS(?) AND `t1`.`f3` = ABS(?) OR `t1`.`f4` = ABS(?)');
+    assert(values.join(', ') === '1, -1, -2');
+  });
+
+  it('now', function () {
+    const {
+      sql,
+      values,
+    } = mysql.select('t1', {
+      columns: [
+        'f1',
+        mysql.now(),
+      ],
+      wheres: [
+        ['f2', '<', mysql.now()],
+      ],
+    });
+    assert(sql === 'SELECT `t1`.`f1`, NOW() FROM `t1` WHERE `t1`.`f2` < NOW()');
+    assert(values.join(', ') === '');
   });
 });
 
@@ -537,46 +662,6 @@ describe('total', function () {
     });
     assert(sql === 'SELECT COUNT(*) AS `total` FROM `t1` LEFT JOIN `t2` ON `t1`.`f1` = `t2`.`f2` WHERE `t1`.`f1` = ? ORDER BY `t1`.`f1` ASC');
     assert(values.join(', ') === '1');
-  });
-
-  it('subQuery exists', function () {
-    const {
-      sql,
-      values,
-    } = mysql.select('t1', {
-      wheres: [
-        ['f0', '=', 0],
-        ['EXISTS', mysql.subQuery('t2', {
-          columns: ['f2'],
-          wheres: {
-            f3: 3,
-          },
-        })],
-        ['f4', '=', 4],
-      ],
-    });
-    assert(sql === 'SELECT * FROM `t1` WHERE `t1`.`f0` = ? AND EXISTS (SELECT `t2`.`f2` FROM `t2` WHERE `t2`.`f3` = ?) AND `t1`.`f4` = ?');
-    assert(values.join(', ') === '0, 3, 4');
-  });
-
-  it('subQuery not exists', function () {
-    const {
-      sql,
-      values,
-    } = mysql.select('t1', {
-      wheres: [
-        ['f0', '=', 0],
-        ['NOT EXISTS', mysql.subQuery('t2', {
-          columns: ['f2'],
-          wheres: {
-            f3: 3,
-          },
-        })],
-        ['f4', '=', 4],
-      ],
-    });
-    assert(sql === 'SELECT * FROM `t1` WHERE `t1`.`f0` = ? AND NOT EXISTS (SELECT `t2`.`f2` FROM `t2` WHERE `t2`.`f3` = ?) AND `t1`.`f4` = ?');
-    assert(values.join(', ') === '0, 3, 4');
   });
 });
 

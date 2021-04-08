@@ -23,27 +23,35 @@ const helper = {
  *   t2: ['f4'],
  * },
  */
-function fillColumns(table, columns, sql) {
-  if (!columns || columns === '*' || (isArray(columns) && !columns.length)) {
-    sql.push('*');
-  } else if (isArray(columns)) {
-    sql.push(genColumns(table, columns));
+function fillColumns(table, columns, sql, values) {
+  if (isArray(columns) && columns.length) {
+    sql.push(genColumns(table, columns, sql, values));
   } else if (isObject(columns)) {
     sql.push(
       Object
         .keys(columns)
-        .map(tb => genColumns(tb, columns[tb]))
+        .map(tb => genColumns(tb, columns[tb], sql, values))
         .join(', ')
     );
+  } else if (isRaw(columns)) {
+    sql.push(columns(sql, values));
+  } else {
+    sql.push('*');
   }
 }
 
-function genColumns(table, columns) {
+function genColumns(table, columns, sql, values) {
   if (isArray(columns)) {
     return columns
       .map((column) => {
         if (isArray(column) && column.length > 1) {
-          return `\`${table}\`.\`${column[0]}\` AS \`${column[1]}\``;
+          if (isRaw(column[0])) {
+            return `${column[0](sql, values)} AS \`${column[1]}\``;
+          } else {
+            return `\`${table}\`.\`${isRaw(column[0]) ? column[0](sql, values): column[0]}\` AS \`${column[1]}\``;
+          }
+        } else if (isRaw(column)) {
+          return column(sql, values);
         } else {
           return `\`${table}\`.\`${column}\``;
         }
@@ -156,7 +164,10 @@ function fillJoins(table, alias, joins, sql) {
  * ]
  */
 function fillWheres(table, wheres, sql, values) {
-  if (isExp(wheres)) {
+  if (isRaw(wheres)) {
+    sql.push('WHERE');
+    genRaw(table, wheres, sql, values);
+  } else if (isExp(wheres)) {
     sql.push('WHERE');
     genWhere(table, wheres, sql, values);
   } else if (isObject(wheres)) {
@@ -188,7 +199,9 @@ function fillWheres(table, wheres, sql, values) {
 }
 
 function genWheres(table, wheres, sql, values) {
-  if (isExp(wheres)) {
+  if (isRaw(wheres)) {
+    genRaw(table, wheres, sql, values);
+  } else if (isExp(wheres)) {
     genWhere(table, wheres, sql, values);
   } else if (isObject(wheres)) {
     if (wheres.or) {
@@ -235,37 +248,65 @@ function genWhere(table, [field, operator, value], sql, values) {
     case '>=':
     case '<':
     case '<=':
-      sql.push(`\`${table}\`.\`${field}\` ${operator} ?`);
-      values.push(value);
+      if (isRaw(value)) {
+        sql.push(`\`${table}\`.\`${field}\` ${operator} ${value(sql, values)}`);
+      } else if (isSubQuery(value)) {
+        const subQuery = value();
+        sql.push(`\`${table}\`.\`${field}\` ${operator} ( ${subQuery.sql} )`);
+        values.push(...subQuery.values);
+      } else {
+        sql.push(`\`${table}\`.\`${field}\` ${operator} ?`);
+        values.push(value);
+      }
       break;
     case 'LIKE':
-      sql.push(`\`${table}\`.\`${field}\` LIKE ?`);
-      values.push(value);
+      if (isRaw(value)) {
+        sql.push(`\`${table}\`.\`${field}\` ${operator} ${value(sql, values)}`);
+      } else if (isSubQuery(value)) {
+        const subQuery = value();
+        sql.push(`\`${table}\`.\`${field}\` LIKE ( ${subQuery.sql} )`);
+        values.push(...subQuery.values);
+      } else {
+        sql.push(`\`${table}\`.\`${field}\` LIKE ?`);
+        values.push(value);
+      }
       break;
     case 'NOTLIKE':
     case 'NOT LIKE':
-      sql.push(`\`${table}\`.\`${field}\` NOT LIKE ?`);
-      values.push(value);
+      if (isRaw(value)) {
+        sql.push(`\`${table}\`.\`${field}\` NOT LIKE ${value(sql, values)}`);
+      } else if (isSubQuery(value)) {
+        const subQuery = value();
+        sql.push(`\`${table}\`.\`${field}\` NOT LIKE ( ${subQuery.sql} )`);
+        values.push(...subQuery.values);
+      } else {
+        sql.push(`\`${table}\`.\`${field}\` NOT LIKE ?`);
+        values.push(value);
+      }
       break;
     case 'IN':
-      if (!isSubQuery(value)) {
+      if (isRaw(value)) {
+        sql.push(`\`${table}\`.\`${field}\` IN (${value(sql, values)})`);
+      } else if (isSubQuery(value)) {
+        const subQuery = value();
+        sql.push(`\`${table}\`.\`${field}\` IN ( ${subQuery.sql} )`);
+        values.push(...subQuery.values);
+      } else {
         sql.push(`\`${table}\`.\`${field}\` IN (?)`);
         values.push(value);
-      } else {
-        const subQuery = value();
-        sql.push(`\`${table}\`.\`${field}\` IN (${subQuery.sql})`);
-        values.push(...subQuery.values);
       }
       break;
     case 'NOTIN':
     case 'NOT IN':
-      if (!isSubQuery(value)) {
+      if (isRaw(value)) {
+        sql.push(`\`${table}\`.\`${field}\` NOT IN (${value(sql, values)})`);
+      } else if (isSubQuery(value)) {
+        const subQuery = value();
+        sql.push(`\`${table}\`.\`${field}\` NOT IN ( ${subQuery.sql} )`);
+        values.push(...subQuery.values);
+      } else {
         sql.push(`\`${table}\`.\`${field}\` NOT IN (?)`);
         values.push(value);
-      } else {
-        const subQuery = value();
-        sql.push(`\`${table}\`.\`${field}\` NOT IN (${subQuery.sql})`);
-        values.push(...subQuery.values);
       }
       break;
     case 'BETWEEN':
@@ -294,7 +335,7 @@ function genWhere(table, [field, operator, value], sql, values) {
         case 'EXISTS':
           if (isSubQuery(operator)) {
             const subQuery = operator();
-            sql.push(`EXISTS (${subQuery.sql})`);
+            sql.push(`EXISTS ( ${subQuery.sql} )`);
             values.push(...subQuery.values);
           }
           break;
@@ -302,7 +343,7 @@ function genWhere(table, [field, operator, value], sql, values) {
         case 'NOT EXISTS':
           if (isSubQuery(operator)) {
             const subQuery = operator();
-            sql.push(`NOT EXISTS (${subQuery.sql})`);
+            sql.push(`NOT EXISTS ( ${subQuery.sql} )`);
             values.push(...subQuery.values);
           }
           break;
@@ -313,12 +354,20 @@ function genWhere(table, [field, operator, value], sql, values) {
   }
 }
 
+function genRaw(table, raw, sql, values) {
+  sql.push(raw(sql, values));
+}
+
 function isExp(exp) {
   return exp && isArray(exp) && isString(exp[0]);
 }
 
 function isSubQuery(fn) {
   return fn && isFunction(fn) && fn.name === 'subQuery';
+}
+
+function isRaw(fn) {
+  return fn && isFunction(fn) && fn.name === 'raw';
 }
 
 /*

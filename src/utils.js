@@ -3,7 +3,7 @@ const utils = {
     return Object.prototype.toString.call(obj) === '[object Object]';
   },
   isFunction(fn) {
-    return Object.prototype.toString.call(fn) === '[object Function]' && fn.name === 'subQuery';
+    return Object.prototype.toString.call(fn) === '[object Function]';
   },
   isArray(arr) {
     return Array.isArray(arr);

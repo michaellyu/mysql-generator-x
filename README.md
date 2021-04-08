@@ -144,6 +144,24 @@ var {
   ],
 });
 
+// raw
+const {
+  sql, // SELECT ABS(`t1`.`f0`) AS `f0`, ABS(`t1`.`f1`) FROM `t1` WHERE `t1`.`f2` = ABS(?) AND `t1`.`f3` = ABS(?) OR `t1`.`f4` = ABS(?)
+  values, // [1, -1, -2]
+} = mysql.select('t1', {
+  columns: [
+    [mysql.raw('ABS(`t1`.`f0`)'), 'f0'],
+    mysql.raw('ABS(`t1`.`f1`)'),
+  ],
+  wheres: [
+    ['f2', '=', mysql.raw('ABS(?)', [1])],
+    mysql.raw('`t1`.`f3` = ABS(?)', [-1]),
+    {
+      or: mysql.raw('`t1`.`f4` = ABS(?)', [-2]),
+    },
+  ],
+});
+
 // orders
 var {
   sql, // SELECT * FROM `t1` ORDER BY `t1`.`f1` ASC, `t1`.`f2` DESC
@@ -202,6 +220,24 @@ var {
   orders: ['f1'],
   page: 1,
   size: 10,
+});
+
+// subQuery
+const {
+  sql, // SELECT * FROM `t1` WHERE `t1`.`f1` IN ( SELECT `t2`.`f2` FROM `t2` WHERE `t2`.`f3` IN ( SELECT `t3`.`f4` FROM `t3` WHERE `t3`.`f5` = ? ) )
+  values, // [1]
+} = mysql.select('t1', {
+  wheres: [
+    ['f1', 'in', mysql.subQuery('t2', {
+      columns: ['f2'],
+      wheres: ['f3', 'in', mysql.subQuery('t3', {
+        columns: ['f4'],
+        wheres: {
+          f5: 1,
+        },
+      })],
+    })],
+  ],
 });
 
 /* TOTAL */

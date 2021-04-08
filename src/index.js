@@ -48,7 +48,7 @@ const mysql = {
     if (isCount) {
       sql.push('COUNT(*) AS `total`');
     } else {
-      fillColumns(table, options.columns, sql);
+      fillColumns(table, options.columns, sql, values);
     }
     sql.push(`FROM`);
     if (options.alias && options.alias[table]) {
@@ -78,11 +78,23 @@ const mysql = {
   subQuery: function (table, options = {}, isCount = false) {
     function subQuery () {
       return mysql.select(table, options, isCount);
-    };
+    }
     subQuery.toUpperCase = function () {
       return 'SUBQUERY';
     };
     return subQuery;
+  },
+  raw: function (literal_sql, literal_values) {
+    function raw (sql, values) {
+      if (literal_values && literal_values.length) {
+        values.push(...literal_values);
+      }
+      return literal_sql;
+    }
+    return raw;
+  },
+  now: function () {
+    return mysql.raw('NOW()');
   },
   /*
    * table: 't1', options: {
