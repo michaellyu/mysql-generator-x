@@ -89,7 +89,7 @@ function genColumns(table, columns, sql, values) {
  *   },
  * ]
  */
-function fillJoins(table, alias, joins, sql) {
+function fillJoins(table, alias, joins, sql, values) {
   if (isObject(joins)) {
     Object
       .keys(joins)
@@ -120,11 +120,51 @@ function fillJoins(table, alias, joins, sql) {
           } else {
             return;
           }
-          sql.push(`${joinType} ${alias && alias[tables[1]] ? `\`${alias[tables[1]]}\` AS \`${tables[1]}\`` : `\`${tables[1]}\``} ON \`${tables[0]}\`.\`${join.on[0]}\` = \`${tables[1]}\`.\`${join.on[1]}\``);
+          if (isArray(join.on[0])) {
+            sql.push(`${joinType} ${alias && alias[tables[1]] ? `\`${alias[tables[1]]}\` AS \`${tables[1]}\`` : `\`${tables[1]}\``} ON`);
+            genOns(join.on, sql, values);
+          } else if (isObject(join.on[0])) {
+            sql.push(`${joinType} ${alias && alias[tables[1]] ? `\`${alias[tables[1]]}\` AS \`${tables[1]}\`` : `\`${tables[1]}\``} ON`);
+            genOn(join.on, sql, values);
+          } else {
+            sql.push(`${joinType} ${alias && alias[tables[1]] ? `\`${alias[tables[1]]}\` AS \`${tables[1]}\`` : `\`${tables[1]}\``} ON \`${tables[0]}\`.\`${join.on[0]}\` = \`${tables[1]}\`.\`${join.on[1]}\``);
+          }
         } else if (isArray(join)) {
           sql.push(`LEFT JOIN ${alias && alias[join[0]] ? `\`${alias[join[0]]}\` AS \`${join[0]}\`` : `\`${join[0]}\``} ON \`${table}\`.\`${join[1]}\` = \`${join[0]}\`.\`${join[2]}\``);
         }
       });
+  }
+}
+
+function genOns(ons, sql, values) {
+  ons
+    .forEach((on, index) => {
+      if (index > 0) {
+        if (on.or) {
+          sql.push('OR');
+        } else {
+          sql.push('AND');
+        }
+      }
+      if (on.or) {
+        sql.push('(');
+        if (isArray(on.or[0])) {
+          genOns(on.or, sql, values);
+        } else {
+          genOn(on.or, sql, values);
+        }
+        sql.push(')');
+      } else {
+        genOn(on, sql, values);
+      }
+    });
+}
+
+function genOn(on, sql, values) {
+  if (on.length === 3 && isObject(on[2])) {
+    sql.push(`\`${on[0].table}\`.\`${on[0].column}\` ${on[1]} \`${on[2].table}\`.\`${on[2].column}\``);
+  } else {
+    genWhere(on[0].table, [on[0].column, on[1], on[2]], sql, values);
   }
 }
 

@@ -79,6 +79,44 @@ var {
   ],
 });
 
+// joins on
+const {
+  sql, // SELECT * FROM `t1` LEFT JOIN `t2` ON `t1`.`f1` = `t2`.`f2` OR ( `t1`.`f3` = `t2`.`f4` AND `t1`.`f5` IN (?) AND `t2`.`f6` = ABS(?) ) LEFT JOIN `t3` AS `t0` ON `t2`.`f7` = `t0`.`f8` LEFT JOIN `t3` ON `t2`.`f9` = `t3`.`f10` OR ( `t2`.`f11` = `t3`.`f12` )
+  values, // [[1, 2, 3], -1]
+} = mysql.select('t1', {
+  alias: {
+    t0: 't3',
+  },
+  joins: [
+    {
+      left: ['t1', 't2'],
+      on: [
+        [{ table: 't1', column: 'f1'}, '=', { table: 't2', column: 'f2' }],
+        {
+          or: [
+            [{ table: 't1', column: 'f3'}, '=', { table: 't2', column: 'f4'}],
+            [{ table: 't1', column: 'f5'}, 'IN', [1, 2, 3]],
+            [{ table: 't2', column: 'f6'}, '=', mysql.raw('ABS(?)', [-1])],
+          ],
+        }
+      ],
+    },
+    {
+      left: ['t2', 't0'],
+      on: [{ table: 't2', column: 'f7'}, '=', { table: 't0', column: 'f8' }],
+    },
+    {
+      left: ['t2', 't3'],
+      on: [
+        [{ table: 't2', column: 'f9'}, '=', { table: 't3', column: 'f10' }],
+        {
+          or: [{ table: 't2', column: 'f11'}, '=', { table: 't3', column: 'f12' }],
+        },
+      ],
+    },
+  ],
+});
+
 // alias
 var {
   sql, // SELECT * FROM `t1` AS `t` LEFT JOIN `t1` AS `p` ON `t`.`f1` = `p`.`f2`

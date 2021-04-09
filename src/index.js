@@ -75,6 +75,9 @@ const mysql = {
       values,
     };
   },
+  query: function (table, options = {}, isCount = false) {
+    return this.select(table, options, isCount);
+  },
   subQuery: function (table, options = {}, isCount = false) {
     function subQuery () {
       return mysql.select(table, options, isCount);
@@ -83,6 +86,9 @@ const mysql = {
       return 'SUBQUERY';
     };
     return subQuery;
+  },
+  subquery: function (table, options = {}, isCount = false) {
+    return this.subQuery(table, options, isCount);
   },
   raw: function (literal_sql, literal_values) {
     function raw (sql, values) {
